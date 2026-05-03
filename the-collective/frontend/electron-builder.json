@@ -25,6 +25,10 @@
         "!**/__pycache__",
         "!*.pyc"
       ]
+    },
+    {
+      "from": "dist",
+      "to": "web"
     }
   ],
   "win": {

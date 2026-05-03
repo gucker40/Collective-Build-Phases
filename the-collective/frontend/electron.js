@@ -50,9 +50,15 @@ function startBackend() {
     return;
   }
 
+  // Packaged: dist is in resources/web/ (real filesystem, readable by Python).
+  // Dev: dist is next to electron.js in the frontend folder.
+  const webDist = isDev
+    ? path.join(__dirname, 'dist')
+    : path.join(process.resourcesPath, 'web');
+
   backendProcess = spawn(python, ['-u', script], {
     cwd: backendDir,
-    env: { ...process.env, TC_WEB_DIST: path.join(__dirname, 'dist') },
+    env: { ...process.env, TC_WEB_DIST: webDist },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 
