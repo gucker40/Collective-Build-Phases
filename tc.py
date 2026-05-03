@@ -9,6 +9,8 @@ Usage:
 import sys, os, subprocess, shutil, time, platform, json
 from pathlib import Path
 
+_WIN = os.name == "nt"   # npm/npx are .cmd files on Windows — need shell=True
+
 ROOT     = Path(__file__).resolve().parent
 BACKEND  = ROOT / "the-collective" / "backend"
 FRONTEND = ROOT / "the-collective" / "frontend"
@@ -29,7 +31,8 @@ def run(cmd, cwd=None, env=None, check=True):
         proc = subprocess.Popen(
             cmd, cwd=cwd, env=env,
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-            text=True, encoding="utf-8", errors="replace"
+            text=True, encoding="utf-8", errors="replace",
+            shell=_WIN,   # required on Windows for npm.cmd / npx.cmd
         )
         for line in proc.stdout:
             line = line.rstrip()
@@ -44,21 +47,23 @@ def find_python():
     for candidate in ["python", "python3", "py"]:
         if shutil.which(candidate):
             result = subprocess.run([candidate, "--version"],
-                                    capture_output=True, text=True)
+                                    capture_output=True, text=True, shell=_WIN)
             if result.returncode == 0:
                 return candidate, result.stdout.strip() + result.stderr.strip()
     return None, None
 
 def find_node():
     if shutil.which("node"):
-        r = subprocess.run(["node", "--version"], capture_output=True, text=True)
+        r = subprocess.run(["node", "--version"], capture_output=True, text=True, shell=_WIN)
         return r.stdout.strip()
     return None
 
 def find_npm():
-    if shutil.which("npm"):
-        r = subprocess.run(["npm", "--version"], capture_output=True, text=True)
-        return r.stdout.strip()
+    # On Windows npm is npm.cmd — shutil.which finds it but subprocess needs shell=True
+    if shutil.which("npm") or shutil.which("npm.cmd"):
+        r = subprocess.run(["npm", "--version"], capture_output=True, text=True, shell=_WIN)
+        if r.returncode == 0:
+            return r.stdout.strip()
     return None
 
 # ── commands ──────────────────────────────────────────────────────────────────
@@ -132,8 +137,9 @@ def cmd_diagnose():
         f.write("\n".join(lines))
     p()
     p(f"Saved to: {out}")
-    p("Opening in Notepad...")
-    os.startfile(str(out))
+    if _WIN:
+        p("Opening in Notepad...")
+        os.startfile(str(out))
 
 def cmd_web():
     py, _ = find_python()
@@ -162,7 +168,8 @@ def cmd_web():
     time.sleep(3)
 
     log("Opening http://localhost:5173 ...")
-    os.startfile("http://localhost:5173")
+    if _WIN:
+        os.startfile("http://localhost:5173")
 
     log("Starting Vite dev server... (close this window to stop)")
     run(["npm", "run", "dev"], cwd=FRONTEND, check=False)
