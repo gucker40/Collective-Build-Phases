@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { colors, fonts, radius, styles } from '../../theme/tokens.js';
 import { useAuthStore } from '../../store/auth.js';
+import { api } from '../../api/index.js';
 
 export default function LoginScreen() {
   const { login } = useAuthStore();
@@ -16,20 +17,15 @@ export default function LoginScreen() {
     setError('');
     setLoading(true);
     try {
-      const endpoint = mode === 'login' ? '/api/auth/login' : '/api/auth/register';
-      const body = mode === 'login'
-        ? { username, password }
-        : { username, password, display_name: displayName || username };
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || 'Request failed');
+      let data;
+      if (mode === 'login') {
+        data = await api.auth.login({ username, password });
+      } else {
+        data = await api.auth.register({ username, password, display_name: displayName || username });
+      }
       login(data.token, data.user);
     } catch (err) {
-      setError(err.message);
+      setError(err.message.replace(/^\d+:\s*/, ''));
     }
     setLoading(false);
   }
@@ -43,7 +39,6 @@ export default function LoginScreen() {
         width: '340px', background: colors.card, border: `1px solid ${colors.border}`,
         borderRadius: radius.lg, padding: '36px 32px', boxShadow: '0 20px 80px rgba(0,0,0,0.6)',
       }}>
-        {/* Sigil */}
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
           <svg width="48" height="48" viewBox="0 0 40 40" fill="none">
             <circle cx="20" cy="20" r="18.5" stroke="rgba(200,180,255,0.45)" strokeWidth="1"/>
@@ -54,9 +49,8 @@ export default function LoginScreen() {
         </div>
 
         <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-          <div style={{ fontFamily: fonts.heading, fontSize: '18px', color: colors.text, letterSpacing: '0.15em', marginBottom: '4px' }}>
-            THE COLLECTIVE
-          </div>
+          <div style={{ fontFamily: fonts.heading, fontSize: '18px', color: colors.text,
+            letterSpacing: '0.15em', marginBottom: '4px' }}>THE COLLECTIVE</div>
           <div style={{ fontFamily: fonts.mono, fontSize: '10px', color: colors.dim, letterSpacing: '0.08em' }}>
             {mode === 'login' ? 'SIGN IN TO CONTINUE' : 'CREATE YOUR ACCOUNT'}
           </div>
@@ -66,33 +60,25 @@ export default function LoginScreen() {
           {mode === 'register' && (
             <div>
               <label style={styles.label}>Display Name</label>
-              <input
-                value={displayName} onChange={e => setDisplayName(e.target.value)}
-                placeholder="Your name"
-                style={styles.input}
-              />
+              <input value={displayName} onChange={e => setDisplayName(e.target.value)}
+                placeholder="Your name" style={styles.input} />
             </div>
           )}
           <div>
             <label style={styles.label}>Username</label>
-            <input
-              value={username} onChange={e => setUsername(e.target.value)}
-              placeholder="username" required autoFocus
-              style={styles.input}
-            />
+            <input value={username} onChange={e => setUsername(e.target.value)}
+              placeholder="username" required autoFocus style={styles.input} />
           </div>
           <div>
             <label style={styles.label}>Password</label>
-            <input
-              type="password" value={password} onChange={e => setPassword(e.target.value)}
-              placeholder="••••••••" required
-              style={styles.input}
-            />
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)}
+              placeholder="••••••••" required style={styles.input} />
           </div>
 
           {error && (
-            <div style={{ fontFamily: fonts.mono, fontSize: '11px', color: '#ff9090', padding: '8px 10px',
-              background: 'rgba(255,96,96,0.08)', borderRadius: radius.sm, border: '1px solid rgba(255,96,96,0.2)' }}>
+            <div style={{ fontFamily: fonts.mono, fontSize: '11px', color: '#ff9090',
+              padding: '8px 10px', background: 'rgba(255,96,96,0.08)',
+              borderRadius: radius.sm, border: '1px solid rgba(255,96,96,0.2)' }}>
               {error}
             </div>
           )}

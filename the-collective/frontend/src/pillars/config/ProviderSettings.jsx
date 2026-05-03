@@ -19,8 +19,9 @@ export default function ProviderSettings() {
 
   useEffect(() => {
     api.settings.get().then(cfg => {
+      const fieldMap = { groq_api_key: 'groq_key', anthropic_api_key: 'anthropic_key', ollama_url: 'ollama_url', lmstudio_url: 'lmstudio_url' };
       const v = {};
-      PROVIDERS.forEach(p => { v[p.field] = cfg[p.field] || ''; });
+      PROVIDERS.forEach(p => { v[p.field] = cfg[fieldMap[p.field] || p.field] || ''; });
       setValues(v);
     }).catch(() => {});
   }, []);
@@ -28,12 +29,12 @@ export default function ProviderSettings() {
   async function save() {
     setSaving(true);
     try {
-      const secrets = {};
-      const config = {};
-      ['groq_api_key', 'anthropic_api_key'].forEach(k => { if (values[k]) secrets[k] = values[k]; });
-      ['ollama_url', 'lmstudio_url'].forEach(k => { if (values[k]) config[k] = values[k]; });
-      if (Object.keys(secrets).length) await api.settings.saveSecrets(secrets);
-      if (Object.keys(config).length) await api.settings.save(config);
+      const body = {};
+      if (values['groq_api_key'])      body.groq_key      = values['groq_api_key'];
+      if (values['anthropic_api_key']) body.anthropic_key = values['anthropic_api_key'];
+      if (values['ollama_url'])        body.ollama_url    = values['ollama_url'];
+      if (values['lmstudio_url'])      body.lmstudio_url  = values['lmstudio_url'];
+      await api.settings.save(body);
       notify('Settings saved ✦');
     } catch (e) { notify(e.message, 'error'); }
     setSaving(false);

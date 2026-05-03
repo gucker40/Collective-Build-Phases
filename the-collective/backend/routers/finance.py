@@ -1,5 +1,5 @@
-"""finance.py — Finance pillar (Phase 4 Step 3). Schema ready; UI coming next phase."""
-import time, uuid, json
+"""finance.py — Finance pillar transactions CRUD."""
+import time, uuid
 from typing import Optional
 import aiosqlite
 from fastapi import APIRouter, Depends
@@ -10,34 +10,48 @@ from routers.users import get_current_user
 router = APIRouter()
 
 class TransactionIn(BaseModel):
-    amount: float
-    type: str  # income | expense | transfer
-    category: Optional[str] = None
+    amount: float           # positive = income, negative = expense
     description: Optional[str] = None
-    date: str  # ISO 8601
+    category: str = "Other"
+    date: Optional[str] = None
     account_id: Optional[str] = None
 
-@router.get("/status")
-async def status(): return {"status": "Phase 4 Step 3 — coming soon"}
+@router.get("/list")
+async def list_transactions(
+    user: dict = Depends(get_current_user),
+    db: aiosqlite.Connection = Depends(get_db),
+):
+    rows = await db.execute_fetchall(
+        "SELECT * FROM transactions WHERE user_id=? ORDER BY date DESC, created_at DESC LIMIT 500",
+        (user["id"],),
+    )
+    return [dict(r) for r in rows]
 
-@router.get("/transactions")
-async def list_transactions(user: Optional[dict] = Depends(get_current_user), db: aiosqlite.Connection = Depends(get_db)):
-    user_id = user["id"] if user else "anonymous"
-    rows = await db.execute_fetchall("SELECT * FROM transactions WHERE user_id=? ORDER BY date DESC LIMIT 100", (user_id,))
-    return {"transactions": [dict(r) for r in rows]}
-
-@router.post("/transactions")
-async def add_transaction(body: TransactionIn, user: Optional[dict] = Depends(get_current_user), db: aiosqlite.Connection = Depends(get_db)):
-    user_id = user["id"] if user else "anonymous"
+@router.post("/create")
+async def create_transaction(
+    body: TransactionIn,
+    user: dict = Depends(get_current_user),
+    db: aiosqlite.Connection = Depends(get_db),
+):
     tid = str(uuid.uuid4())
-    await db.execute("INSERT INTO transactions (id,user_id,amount,type,category,description,date,created_at) VALUES (?,?,?,?,?,?,?,?)",
-                     (tid, user_id, body.amount, body.type, body.category, body.description, body.date, time.time()))
+    tx_type = "income" if body.amount >= 0 else "expense"
+    date = body.date or time.strftime("%Y-%m-%d")
+    await db.execute(
+        "INSERT INTO transactions (id,user_id,amount,type,category,description,date,account_id,source,created_at) "
+        "VALUES (?,?,?,?,?,?,?,?,?,?)",
+        (tid, user["id"], body.amount, tx_type, body.category,
+         body.description, date, body.account_id, "manual", time.time()),
+    )
     await db.commit()
-    return {"id": tid, "saved": True}
+    return {"id": tid, "amount": body.amount, "type": tx_type,
+            "description": body.description, "category": body.category, "date": date}
 
-@router.delete("/transactions/{tid}")
-async def delete_transaction(tid: str, user: Optional[dict] = Depends(get_current_user), db: aiosqlite.Connection = Depends(get_db)):
-    user_id = user["id"] if user else "anonymous"
-    await db.execute("DELETE FROM transactions WHERE id=? AND user_id=?", (tid, user_id))
+@router.delete("/delete/{tid}")
+async def delete_transaction(
+    tid: str,
+    user: dict = Depends(get_current_user),
+    db: aiosqlite.Connection = Depends(get_db),
+):
+    await db.execute("DELETE FROM transactions WHERE id=? AND user_id=?", (tid, user["id"]))
     await db.commit()
     return {"deleted": tid}

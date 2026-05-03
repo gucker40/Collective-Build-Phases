@@ -87,6 +87,8 @@ CREATE TABLE IF NOT EXISTS tasks (
     title       TEXT NOT NULL,
     description TEXT,
     status      TEXT DEFAULT 'todo',
+    done        INTEGER DEFAULT 0,
+    priority    TEXT DEFAULT 'medium',
     due_date    TEXT,
     project_id  TEXT,
     created_at  REAL,
@@ -203,6 +205,15 @@ CREATE TABLE IF NOT EXISTS board_comments (
 async def init_db():
     async with aiosqlite.connect(DB_PATH) as db:
         await db.executescript(SCHEMA)
+        # Add columns introduced after initial schema (safe on existing DBs)
+        for sql in [
+            "ALTER TABLE tasks ADD COLUMN done INTEGER DEFAULT 0",
+            "ALTER TABLE tasks ADD COLUMN priority TEXT DEFAULT 'medium'",
+        ]:
+            try:
+                await db.execute(sql)
+            except Exception:
+                pass  # column already exists
         await db.commit()
     await _migrate_from_json()
 

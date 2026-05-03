@@ -1,5 +1,10 @@
 """main.py — The Collective Phase 4 backend."""
 
+import sys
+from pathlib import Path
+# Ensure the backend directory is always on sys.path regardless of cwd
+sys.path.insert(0, str(Path(__file__).parent))
+
 import asyncio
 import os
 from contextlib import asynccontextmanager

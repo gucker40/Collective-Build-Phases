@@ -114,13 +114,15 @@ export default function DataVault() {
     } catch (err) { notify(err.message, 'error'); }
   }
 
-  async function deleteNote(id) {
-    try { await api.vault.delete(id); setNotes(prev => prev.filter(n => n.id !== id)); }
-    catch {}
+  async function deleteNote(note) {
+    try {
+      await api.vault.delete(note.title || note.filename || String(note.id));
+      setNotes(prev => prev.filter(n => n.id !== note.id));
+    } catch {}
   }
 
   async function deleteMemory(id) {
-    try { await api.memory.delete(id); setMemories(prev => prev.filter(m => m.id !== id)); }
+    try { await api.memory.unseal(id); setMemories(prev => prev.filter(m => m.id !== id)); }
     catch {}
   }
 
@@ -179,7 +181,7 @@ export default function DataVault() {
           notes.length === 0
             ? <div style={{ fontFamily: fonts.mono, fontSize: '11px', color: colors.dim,
                 textAlign: 'center', padding: '40px' }}>No notes yet.</div>
-            : notes.map(n => <NoteCard key={n.id} note={n} onDelete={deleteNote} />)
+            : notes.map(n => <NoteCard key={n.id || n.filename} note={n} onDelete={() => deleteNote(n)} />)
         )}
 
         {!loading && tab === 'artifacts' && (
