@@ -3,38 +3,59 @@ setlocal
 title The Collective - Desktop Mode
 
 echo.
-echo  THE COLLECTIVE  —  Desktop Mode  (Electron)
-echo  ════════════════════════════════════════════
+echo  THE COLLECTIVE  --  Desktop Mode  (Electron)
+echo  ===============================================
 echo.
 
 set "ROOT=%~dp0"
 set "BACKEND=%ROOT%the-collective\backend"
 set "FRONTEND=%ROOT%the-collective\frontend"
 
-REM Prerequisite checks
-where python >nul 2>&1 || (echo  [ERROR] Python not found. Get it at python.org & pause & exit /b 1)
-where node   >nul 2>&1 || (echo  [ERROR] Node.js not found. Get it at nodejs.org  & pause & exit /b 1)
+where python >nul 2>&1
+if %errorlevel% neq 0 (
+    echo  [ERROR]  Python not found. Download from python.org
+    echo  Press any key to exit...
+    pause >nul
+    exit /b 1
+)
 
-REM Install Python deps
+where node >nul 2>&1
+if %errorlevel% neq 0 (
+    echo  [ERROR]  Node.js not found. Download from nodejs.org
+    echo  Press any key to exit...
+    pause >nul
+    exit /b 1
+)
+
 echo  Installing Python dependencies (first run only)...
 cd /d "%BACKEND%"
 pip install -r requirements.txt -q --disable-pip-version-check
-
-REM Install Node deps
-echo  Checking Node dependencies (first run only)...
-cd /d "%FRONTEND%"
-if not exist node_modules (
-    echo  Running npm install...
-    npm install --silent
+if %errorlevel% neq 0 (
+    echo  [ERROR]  pip install failed.
+    echo  Press any key to exit...
+    pause >nul
+    exit /b 1
 )
 
-REM Start backend in a separate window
+echo  Checking Node dependencies...
+cd /d "%FRONTEND%"
+if not exist node_modules (
+    echo  Running npm install (downloads Electron ~80MB on first run)...
+    npm install
+    if %errorlevel% neq 0 (
+        echo  [ERROR]  npm install failed. See error above.
+        echo  Press any key to exit...
+        pause >nul
+        exit /b 1
+    )
+)
+
+echo.
 echo  Starting backend on port 8000...
 start "Collective Backend" cmd /k "cd /d "%BACKEND%" && python main.py"
 
 timeout /t 3 /nobreak >nul
 
-REM Launch Electron + Vite together
 echo  Launching desktop app...
 echo  (Close the app window and backend window to stop)
 echo.
