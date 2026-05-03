@@ -170,7 +170,10 @@ async def save_config_route(request: Request):
 
 @router.post("/tunnel/start")
 async def tunnel_start(request: Request):
-    body  = await request.json()
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
     token = body.get("token", "").strip()
     if token and token != "***configured***":
         save_secrets({"tunnel_token": token})

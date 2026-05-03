@@ -69,7 +69,11 @@ function NetworkTab() {
 
   async function startTunnel() {
     try {
-      await api.network.start();
+      const res = await api.network.start();
+      if (res.ok === false) {
+        notify(res.error || 'Failed to start tunnel', 'error');
+        return;
+      }
       notify('Tunnel starting...');
       setTimeout(async () => {
         const s = await api.network.status();
@@ -96,19 +100,33 @@ function NetworkTab() {
           letterSpacing: '0.1em', marginBottom: '12px' }}>CLOUDFLARE TUNNEL</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
           <div style={{ width: '8px', height: '8px', borderRadius: '50%',
-            background: status?.running ? colors.success : colors.dim }} />
-          <span style={{ fontFamily: fonts.mono, fontSize: '11px', color: status?.running ? colors.success : colors.dim }}>
-            {status?.running ? `Active · ${status.url || ''}` : 'Inactive'}
+            background: status?.tunnel_running ? colors.success : colors.dim }} />
+          <span style={{ fontFamily: fonts.mono, fontSize: '11px', color: status?.tunnel_running ? colors.success : colors.dim }}>
+            {status?.tunnel_running ? `Active · ${status.lan_url || ''}` : 'Inactive'}
           </span>
         </div>
+        {!status?.cloudflared_installed && (
+          <div style={{ fontFamily: fonts.mono, fontSize: '10px', color: '#ff9090',
+            marginBottom: '10px', padding: '6px 10px', background: 'rgba(255,96,96,0.06)',
+            borderRadius: '4px', border: '1px solid rgba(255,96,96,0.15)' }}>
+            cloudflared not found. Download from cloudflare.com and place in the app data folder.
+          </div>
+        )}
+        {!status?.tunnel_token_set && (
+          <div style={{ fontFamily: fonts.mono, fontSize: '10px', color: colors.gold,
+            marginBottom: '10px' }}>
+            Add a tunnel token below before starting.
+          </div>
+        )}
         <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={startTunnel} disabled={status?.running} style={{
-            ...styles.btnPrimary, opacity: status?.running ? 0.4 : 1,
-            cursor: status?.running ? 'not-allowed' : 'pointer',
+          <button onClick={startTunnel} disabled={status?.tunnel_running || !status?.cloudflared_installed} style={{
+            ...styles.btnPrimary,
+            opacity: (status?.tunnel_running || !status?.cloudflared_installed) ? 0.4 : 1,
+            cursor: (status?.tunnel_running || !status?.cloudflared_installed) ? 'not-allowed' : 'pointer',
           }}>Start</button>
-          <button onClick={stopTunnel} disabled={!status?.running} style={{
-            ...styles.btnGhost, opacity: !status?.running ? 0.4 : 1,
-            cursor: !status?.running ? 'not-allowed' : 'pointer',
+          <button onClick={stopTunnel} disabled={!status?.tunnel_running} style={{
+            ...styles.btnGhost, opacity: !status?.tunnel_running ? 0.4 : 1,
+            cursor: !status?.tunnel_running ? 'not-allowed' : 'pointer',
           }}>Stop</button>
         </div>
       </div>
