@@ -1,0 +1,55 @@
+{
+  "appId": "com.logos.app",
+  "productName": "The Collective",
+  "copyright": "The Collective",
+  "directories": {
+    "output": "../dist-app",
+    "buildResources": "public"
+  },
+  "files": [
+    "dist/**/*",
+    "electron.js",
+    "preload.js",
+    "public/**/*"
+  ],
+  "extraResources": [
+    {
+      "from": "../backend",
+      "to": "backend",
+      "filter": [
+        "**/*"
+      ]
+    },
+    {
+      "from": "dist",
+      "to": "web-dist",
+      "filter": [
+        "**/*"
+      ]
+    }
+  ],
+  "win": {
+    "target": [
+      {
+        "target": "nsis",
+        "arch": [
+          "x64"
+        ]
+      }
+    ],
+    "icon": "public/icon.ico",
+    "requestedExecutionLevel": "asInvoker"
+  },
+  "nsis": {
+    "oneClick": false,
+    "perMachine": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "The Collective",
+    "menuCategory": "The Collective",
+    "deleteAppDataOnUninstall": false,
+    "artifactName": "The Collective Setup ${version}.exe"
+  },
+  "publish": null
+}
