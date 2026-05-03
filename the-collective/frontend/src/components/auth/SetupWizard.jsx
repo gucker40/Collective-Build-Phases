@@ -125,38 +125,57 @@ export default function SetupWizard({ onComplete }) {
 
         {current === 'groq' && (
           <div>
-            <div style={{ fontFamily: fonts.heading, fontSize: '14px', color: colors.text,
-              letterSpacing: '0.1em', marginBottom: '6px' }}>
-              {provider === 'groq' ? 'GROQ API KEY' : 'CLAUDE API KEY'}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+              <div style={{ fontFamily: fonts.heading, fontSize: '14px', color: colors.text,
+                letterSpacing: '0.1em' }}>
+                {provider === 'groq' ? 'GROQ API KEY' : 'CLAUDE API KEY'}
+              </div>
+              <span style={{ fontFamily: fonts.mono, fontSize: '9px', color: colors.gold,
+                background: 'rgba(240,192,64,0.1)', border: '1px solid rgba(240,192,64,0.25)',
+                borderRadius: '4px', padding: '2px 7px', letterSpacing: '0.06em' }}>
+                OPTIONAL
+              </span>
             </div>
-            <div style={{ fontFamily: fonts.mono, fontSize: '11px', color: colors.dim, marginBottom: '20px' }}>
+            <div style={{ fontFamily: fonts.mono, fontSize: '11px', color: colors.dim, marginBottom: '16px' }}>
               {provider === 'groq'
                 ? 'Get a free key at console.groq.com — takes 30 seconds.'
                 : 'Get your key at console.anthropic.com'}
+              {' '}You can also add this later in <strong style={{ color: colors.muted }}>Config → Providers</strong>.
             </div>
             {provider === 'groq' && (
               <input
                 value={groqKey} onChange={e => setGroqKey(e.target.value)}
                 placeholder="gsk_..." autoFocus
-                style={{ ...styles.input, marginBottom: '20px', fontFamily: fonts.mono, fontSize: '12px' }}
+                style={{ ...styles.input, marginBottom: '12px', fontFamily: fonts.mono, fontSize: '12px' }}
               />
             )}
             {provider === 'claude' && (
               <input
                 value={claudeKey} onChange={e => setClaudeKey(e.target.value)}
                 placeholder="sk-ant-..." autoFocus
-                style={{ ...styles.input, marginBottom: '20px', fontFamily: fonts.mono, fontSize: '12px' }}
+                style={{ ...styles.input, marginBottom: '12px', fontFamily: fonts.mono, fontSize: '12px' }}
               />
             )}
             <div style={{ fontFamily: fonts.mono, fontSize: '10px', color: colors.dim,
               padding: '8px 10px', background: 'rgba(160,122,255,0.06)', borderRadius: radius.sm,
               border: `1px solid ${colors.border}`, marginBottom: '20px' }}>
-              Keys are stored locally in secrets.json — never sent anywhere except the provider.
+              Keys are stored locally in secrets.json — never leave your machine except to reach the provider directly.
             </div>
             <div style={{ display: 'flex', gap: '10px' }}>
               <button onClick={() => setStep(1)} style={{ ...styles.btnGhost, flex: 1 }}>Back</button>
-              <button onClick={() => setStep(3)} style={{ ...styles.btnPrimary, flex: 2 }}>
-                {(provider === 'groq' ? groqKey : claudeKey) ? 'Save & Continue' : 'Skip for now'}
+              <button onClick={() => setStep(3)} style={{
+                ...styles.btnGhost, flex: 1,
+                color: colors.dim, borderColor: colors.border,
+              }}>Skip for now</button>
+              <button
+                onClick={() => setStep(3)}
+                disabled={!(provider === 'groq' ? groqKey : claudeKey)}
+                style={{
+                  ...styles.btnPrimary, flex: 2,
+                  opacity: (provider === 'groq' ? groqKey : claudeKey) ? 1 : 0.35,
+                  cursor: (provider === 'groq' ? groqKey : claudeKey) ? 'pointer' : 'not-allowed',
+                }}>
+                Save & Continue
               </button>
             </div>
           </div>
