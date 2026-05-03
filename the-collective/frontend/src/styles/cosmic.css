@@ -1,0 +1,132 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: #06040f;
+  color: #e8e0ff;
+  font-family: 'IBM Plex Mono', 'Fira Code', 'Courier New', monospace;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  user-select: none;
+}
+
+/* Allow selection in text areas and inputs */
+input, textarea, [data-selectable] {
+  user-select: text;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(160, 122, 255, 0.2);
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(160, 122, 255, 0.4);
+}
+
+/* Animations */
+@keyframes breathe {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50%       { opacity: 1;   transform: scale(1.04); }
+}
+
+@keyframes sigilSpin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+@keyframes slideIn {
+  from { transform: translateX(20px); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+
+/* Streaming dots */
+.stream-dots span {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(160, 122, 255, 0.6);
+  margin: 0 2px;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+.stream-dots span:nth-child(2) { animation-delay: 0.2s; }
+.stream-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+/* Message fade in */
+.msg-row {
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* Code blocks */
+pre {
+  background: rgba(0, 0, 0, 0.4) !important;
+  border: 1px solid rgba(160, 122, 255, 0.15);
+  border-radius: 8px;
+  overflow-x: auto;
+  padding: 14px 16px !important;
+  margin: 8px 0;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+code {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.92em;
+  background: rgba(160, 122, 255, 0.08);
+  padding: 1px 5px;
+  border-radius: 3px;
+  color: rgba(200, 180, 255, 0.9);
+}
+
+pre code {
+  background: transparent;
+  padding: 0;
+  color: inherit;
+}
+
+/* Electron drag region */
+.drag-region {
+  -webkit-app-region: drag;
+}
+.no-drag {
+  -webkit-app-region: no-drag;
+}
+
+/* Iframe preview */
+iframe {
+  display: block;
+}
+
+/* Focus outlines */
+button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
+  outline: 1px solid rgba(160, 122, 255, 0.5);
+  outline-offset: 1px;
+}
