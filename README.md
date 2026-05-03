@@ -1,99 +1,97 @@
 # The Collective — Phase 4
 
-Local-first AI workspace. Electron desktop app + React frontend + FastAPI backend.
+Local-first AI workspace. Five-pillar desktop app: Logos AI chat, Dashboard, Productivity, Finance, Data Vault.
 
-## Quick Start (Windows)
+---
+
+## What you get when you extract the ZIP
+
+```
+TheCollective-Phase4/
+│
+├── BUILD-INSTALLER.bat      ← builds the Windows .exe installer
+├── LAUNCH-WEB.bat           ← run instantly in your browser (no install)
+├── LAUNCH-DESKTOP.bat       ← run as Electron desktop app (no install)
+│
+├── installer/               ← appears here after running BUILD-INSTALLER.bat
+│   └── TheCollective-Setup-4.0.0.exe
+│
+└── the-collective/          ← all source code (don't need to touch this)
+    ├── backend/
+    ├── frontend/
+    └── skills/
+```
+
+---
+
+## Option 1 — Build the installer (recommended)
 
 **Requirements:** Python 3.10+, Node.js 18+
 
-Double-click one of the launcher scripts at the repo root:
+1. Double-click **`BUILD-INSTALLER.bat`**
+2. Wait ~60 seconds while it installs deps and compiles
+3. When done, `installer/TheCollective-Setup-4.0.0.exe` appears at the root
+4. Run that `.exe` to install like any normal Windows app
+
+---
+
+## Option 2 — Run without installing (dev mode)
 
 | Script | What it does |
 |---|---|
-| `start-web.bat` | Starts backend + opens `http://localhost:5173` in your browser |
-| `start-electron.bat` | Starts backend + launches the Electron desktop window |
+| `LAUNCH-WEB.bat` | Opens the app at `http://localhost:5173` in your browser |
+| `LAUNCH-DESKTOP.bat` | Opens the app as an Electron desktop window |
 
-Both scripts install dependencies automatically on first run.
+Both install all dependencies automatically on first run.
 
-## Manual Setup
+---
 
-**Backend**
-```
-cd the-collective\backend
-pip install -r requirements.txt
-python main.py
-```
+## Requirements
 
-**Frontend** (separate terminal)
-```
-cd the-collective\frontend
-npm install
-npm run dev          # web mode → http://localhost:5173
-npm run electron:dev # desktop mode (requires backend running)
-```
+| Tool | Version | Download |
+|---|---|---|
+| Python | 3.10+ | python.org — check "Add to PATH" |
+| Node.js | 18+ (LTS) | nodejs.org |
 
-**Build installer**
-```
-cd the-collective\frontend
-npm install
-npm run electron:build:win
-# installer → the-collective\frontend\release\
-```
+---
 
-## Structure
+## AI provider setup
 
-```
-the-collective/
-├── backend/                 FastAPI + SQLite
-│   ├── inference/           AI engine (llama-cpp → Groq → LM Studio → Ollama → Claude)
-│   ├── routers/             API endpoints (chat, artifacts, history, memory, …)
-│   ├── services/            Codebase self-edit, web search, keyword extraction
-│   ├── config.py            config.json / secrets.json split
-│   ├── db.py                16-table SQLite schema + v2A-7 migration
-│   └── main.py              FastAPI app + SPA serving
-│
-├── frontend/                React 18 + Zustand + Vite 5
-│   ├── src/
-│   │   ├── logos/           ChatPanel, ArtifactPanel, LogosSigil
-│   │   ├── pillars/         Dashboard, Productivity, Finance, DataVault, Config
-│   │   ├── layout/          AppShell, Sidebar, TitleBar
-│   │   ├── components/      Auth screens, HistorySidebar, LoadingScreen
-│   │   ├── store/           Zustand stores (auth, ui)
-│   │   ├── theme/           Design tokens
-│   │   └── api/             Typed API client
-│   ├── electron.js          Main process (window, backend launcher, IPC)
-│   ├── preload.js           Context bridge
-│   ├── electron-builder.json NSIS / DMG / AppImage config
-│   └── package.json
-│
-└── skills/
-    └── builtin/             html-dashboards.skill.json, code-expert.skill.json
-```
+On first launch you'll see a setup wizard. All fields are **optional** — you can skip and add keys later in **Config → Providers**.
 
-## AI Engine Fallback Chain
+| Provider | Where to get a key | Notes |
+|---|---|---|
+| **Groq** (recommended) | console.groq.com | Free tier, very fast |
+| Claude API | console.anthropic.com | Most capable fallback |
+| LM Studio | localhost:1234 | Run LM Studio app separately |
+| Ollama | localhost:11434 | Run Ollama separately |
+| Native GGUF | — | Drop a `.gguf` file in `the-collective/models/` |
 
-Logos tries providers in this order, using whichever responds first:
+---
 
-1. **Native** — local GGUF model via llama-cpp-python (optional, needs .gguf file)
-2. **Groq** — free cloud API, fastest for most use cases
-3. **LM Studio** — local server on port 1234
-4. **Ollama** — local server on port 11434
-5. **Claude** — Anthropic API (most capable fallback)
-
-Add API keys in-app via **Config → Providers** or during the setup wizard (all fields optional).
-
-## First Run
-
-1. Register an account (first user is automatically admin)
-2. Complete the setup wizard — choose your provider, optionally paste an API key
-3. Start chatting with Logos
-
-## Building the Windows Installer
+## Source layout (inside `the-collective/`)
 
 ```
-cd the-collective\frontend
-npm install
-npm run electron:build:win
-```
+backend/
+  inference/        AI engine — llama-cpp → Groq → LM Studio → Ollama → Claude
+  routers/          API endpoints (chat, artifacts, history, memory, vault, …)
+  services/         Codebase self-edit, web search, keyword extraction
+  config.py         config.json / secrets.json separation (no hardcoded keys)
+  db.py             16-table SQLite schema
+  main.py           FastAPI app + React SPA serving
 
-The `.exe` installer will be at `the-collective\frontend\release\`.
+frontend/
+  src/logos/        ChatPanel, ArtifactPanel, LogosSigil
+  src/pillars/      Dashboard, Productivity, Finance, DataVault, Config
+  src/layout/       AppShell, Sidebar, TitleBar
+  src/components/   Auth screens, HistorySidebar, LoadingScreen
+  src/store/        Zustand stores (auth, ui)
+  src/theme/        Design tokens (colors, fonts, radius, shadow)
+  src/api/          Typed API client
+  electron.js       Main process (window management, backend launcher, IPC)
+  preload.js        Context bridge (window controls, file system, HTML open)
+  electron-builder.json   NSIS installer config
+
+skills/
+  builtin/          html-dashboards.skill.json, code-expert.skill.json
+```
