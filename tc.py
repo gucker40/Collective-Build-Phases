@@ -155,6 +155,14 @@ def cmd_build():
         log("[ERROR] npm not found. Install Node.js from nodejs.org")
         return 1
 
+    # Windows MAX_PATH is 260 chars; deep node_modules paths fail silently if exceeded.
+    if _WIN and len(str(FRONTEND)) > 140:
+        log(f"[WARN] Project path is very long ({len(str(FRONTEND))} chars).")
+        log(f"       Windows MAX_PATH (260) can cause silent npm install failures.")
+        log(f"       Move the project folder to a short path like C:\\tc\\ and retry.")
+        log(f"       Current path: {FRONTEND}")
+        log()
+
     INSTALLER_OUT.mkdir(exist_ok=True)
 
     log("[1/4] Installing Python dependencies...")

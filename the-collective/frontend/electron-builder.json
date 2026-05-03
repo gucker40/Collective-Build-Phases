@@ -35,18 +35,11 @@
     "requestedExecutionLevel": "asInvoker"
   },
   "nsis": {
-    "oneClick": false,
-    "allowToChangeInstallationDirectory": true,
-    "allowElevation": true,
-    "installerIcon": "public/icon.ico",
-    "uninstallerIcon": "public/icon.ico",
-    "installerHeaderIcon": "public/icon.ico",
+    "oneClick": true,
+    "perMachine": false,
     "createDesktopShortcut": true,
     "createStartMenuShortcut": true,
-    "shortcutName": "The Collective",
-    "perMachine": false,
-    "deleteAppDataOnUninstall": false,
-    "include": "build-resources/installer.nsh"
+    "shortcutName": "The Collective"
   },
   "mac": {
     "target": [
