@@ -14,156 +14,145 @@ set "FRONTEND=%APP%\frontend"
 set "BACKEND=%APP%\backend"
 set "OUT=%ROOT%installer"
 
-REM ── Prerequisite checks ──────────────────────────────────────────────────────
+REM ── Verify source folders exist ──────────────────────────────────────────────
 
-where python >nul 2>&1
-if %errorlevel% neq 0 (
-    echo.
+if not exist "%BACKEND%" (
+    echo  [ERROR]  Backend folder not found: %BACKEND%
+    echo           Make sure you extracted the full ZIP before running this.
+    goto :fail
+)
+if not exist "%FRONTEND%" (
+    echo  [ERROR]  Frontend folder not found: %FRONTEND%
+    echo           Make sure you extracted the full ZIP before running this.
+    goto :fail
+)
+
+REM ── Find Python ──────────────────────────────────────────────────────────────
+
+set "PYTHON="
+for %%p in (python python3 py) do (
+    if not defined PYTHON (
+        where %%p >nul 2>&1
+        if !errorlevel! equ 0 set "PYTHON=%%p"
+    )
+)
+if not defined PYTHON (
     echo  [MISSING]  Python 3.10+
     echo             Download: https://www.python.org/downloads/
-    echo             Make sure to check "Add Python to PATH" during install.
-    echo.
-    echo  Press any key to exit...
-    pause >nul
-    exit /b 1
+    echo             Check "Add Python to PATH" during install, then reopen this window.
+    goto :fail
 )
-for /f "tokens=2 delims= " %%v in ('python --version 2^>^&1') do set PYVER=%%v
-echo  [OK]  Python %PYVER%
+for /f "tokens=2 delims= " %%v in ('!PYTHON! --version 2^>^&1') do (
+    echo  [OK]  Python %%v
+)
+
+REM ── Find Node.js ─────────────────────────────────────────────────────────────
+
+REM Try PATH first, then common Windows install locations
+where node >nul 2>&1
+if %errorlevel% neq 0 (
+    if exist "%ProgramFiles%\nodejs\node.exe"           set "PATH=%ProgramFiles%\nodejs;%PATH%"
+    if exist "%ProgramFiles(x86)%\nodejs\node.exe"      set "PATH=%ProgramFiles(x86)%\nodejs;%PATH%"
+    if exist "%LOCALAPPDATA%\Programs\nodejs\node.exe"  set "PATH=%LOCALAPPDATA%\Programs\nodejs;%PATH%"
+    if exist "%APPDATA%\nvm\current\node.exe"            set "PATH=%APPDATA%\nvm\current;%PATH%"
+    if exist "%APPDATA%\fnm\node.exe"                   set "PATH=%APPDATA%\fnm;%PATH%"
+)
 
 where node >nul 2>&1
 if %errorlevel% neq 0 (
-    echo.
     echo  [MISSING]  Node.js 18+
-    echo             Download: https://nodejs.org/  (choose LTS version)
-    echo             Restart this window after installing.
-    echo.
-    echo  Press any key to exit...
-    pause >nul
-    exit /b 1
+    echo             Download the LTS version: https://nodejs.org/
+    echo             After installing, close and reopen this window.
+    goto :fail
 )
-for /f "tokens=1" %%v in ('node --version 2^>^&1') do set NODEVER=%%v
-echo  [OK]  Node.js %NODEVER%
+for /f %%v in ('node --version 2^>^&1') do echo  [OK]  Node.js %%v
 
-echo  [OK]  Paths verified:
-echo         Backend:  %BACKEND%
-echo         Frontend: %FRONTEND%
+where npm >nul 2>&1
+if %errorlevel% neq 0 (
+    echo  [MISSING]  npm  (should come with Node.js -- try reinstalling Node)
+    goto :fail
+)
+
+echo.
+echo  [OK]  All prerequisites found.
+echo  [OK]  Backend:  %BACKEND%
+echo  [OK]  Frontend: %FRONTEND%
 echo.
 
 REM ── Step 1: Python deps ──────────────────────────────────────────────────────
 
 echo  [1/4]  Installing Python dependencies...
-echo         (This may take a minute on first run)
-echo.
 cd /d "%BACKEND%"
-if %errorlevel% neq 0 (
-    echo  [ERROR]  Could not navigate to backend folder: %BACKEND%
-    echo  Press any key to exit...
-    pause >nul
-    exit /b 1
-)
-
-pip install -r requirements.txt --disable-pip-version-check
+!PYTHON! -m pip install -r requirements.txt --disable-pip-version-check
 if %errorlevel% neq 0 (
     echo.
-    echo  [ERROR]  pip install failed. See error above.
-    echo           Common fix: run as Administrator, or check your internet connection.
-    echo.
-    echo  Press any key to exit...
-    pause >nul
-    exit /b 1
+    echo  [ERROR]  pip install failed -- see output above.
+    goto :fail
 )
-echo.
-echo  [1/4]  Python dependencies OK.
+echo  [1/4]  Done.
 echo.
 
 REM ── Step 2: Node deps ────────────────────────────────────────────────────────
 
 echo  [2/4]  Installing Node dependencies...
-echo         (First run downloads Electron ~80MB -- this takes a few minutes)
+echo         NOTE: First run downloads Electron (~80MB). This can take several minutes.
+echo         Do not close this window.
 echo.
 cd /d "%FRONTEND%"
-if %errorlevel% neq 0 (
-    echo  [ERROR]  Could not navigate to frontend folder: %FRONTEND%
-    echo  Press any key to exit...
-    pause >nul
-    exit /b 1
-)
-
 npm install
 if %errorlevel% neq 0 (
     echo.
-    echo  [ERROR]  npm install failed. See error above.
+    echo  [ERROR]  npm install failed -- see output above.
     echo.
-    echo  Common causes:
-    echo    - No internet connection
-    echo    - Electron binary download timed out (try again)
-    echo    - npm registry temporarily unavailable (try again)
-    echo.
-    echo  Press any key to exit...
-    pause >nul
-    exit /b 1
+    echo  Common fixes:
+    echo    - Check your internet connection
+    echo    - If Electron download timed out, run this script again (it will resume)
+    echo    - Try: npm install --prefer-offline
+    goto :fail
 )
-echo.
-echo  [2/4]  Node dependencies OK.
+echo  [2/4]  Done.
 echo.
 
-REM ── Step 3: Build React frontend ─────────────────────────────────────────────
+REM ── Step 3: Vite build ───────────────────────────────────────────────────────
 
-echo  [3/4]  Building frontend (Vite)...
-echo.
+echo  [3/4]  Building frontend...
 npm run build
 if %errorlevel% neq 0 (
     echo.
-    echo  [ERROR]  Vite build failed. See error above.
-    echo.
-    echo  Press any key to exit...
-    pause >nul
-    exit /b 1
+    echo  [ERROR]  Vite build failed -- see output above.
+    goto :fail
 )
-echo.
-echo  [3/4]  Frontend build OK.
-echo.
-
-REM ── Step 4: Electron builder ─────────────────────────────────────────────────
-
-echo  [4/4]  Building Windows installer (electron-builder)...
-echo         (This takes 30-90 seconds)
+echo  [3/4]  Done.
 echo.
 
+REM ── Step 4: electron-builder ─────────────────────────────────────────────────
+
+echo  [4/4]  Building Windows installer...
+echo         (30-90 seconds, downloads NSIS on first run)
+echo.
 if not exist "%OUT%" mkdir "%OUT%"
 
 npx electron-builder --win
 if %errorlevel% neq 0 (
     echo.
-    echo  [ERROR]  electron-builder failed. See error above.
+    echo  [ERROR]  electron-builder failed -- see output above.
     echo.
-    echo  Common causes:
-    echo    - NSIS not bundled yet (electron-builder downloads it automatically)
-    echo    - Antivirus blocking the build -- try disabling temporarily
-    echo    - Disk space low
-    echo.
-    echo  Press any key to exit...
-    pause >nul
-    exit /b 1
+    echo  Common fixes:
+    echo    - Antivirus may be blocking -- try temporarily disabling it
+    echo    - Check available disk space
+    goto :fail
 )
-echo.
-echo  [4/4]  Installer build OK.
+echo  [4/4]  Done.
 echo.
 
-REM ── Locate and copy the .exe ─────────────────────────────────────────────────
+REM ── Find and report the .exe ─────────────────────────────────────────────────
 
-set "FOUND="
-
-REM Check the configured output dir first
-for /r "%OUT%" %%f in (*.exe) do (
-    if not defined FOUND set "FOUND=%%f"
-)
-
-REM Fallback: check frontend/release if output dir was overridden
-if not defined FOUND (
+set "EXE="
+for /r "%OUT%" %%f in (*.exe) do if not defined EXE set "EXE=%%f"
+if not defined EXE (
     for /r "%FRONTEND%\release" %%f in (*.exe) do (
-        if not defined FOUND (
-            set "FOUND=%%f"
+        if not defined EXE (
+            set "EXE=%%f"
             copy /y "%%f" "%OUT%\" >nul 2>&1
         )
     )
@@ -171,18 +160,25 @@ if not defined FOUND (
 
 echo.
 echo  ============================================================
-if defined FOUND (
-    for %%f in ("!FOUND!") do set "EXENAME=%%~nxf"
-    echo    BUILD SUCCESSFUL
+if defined EXE (
+    for %%f in ("!EXE!") do echo    SUCCESS:  installer\%%~nxf
     echo.
-    echo    Installer: installer\!EXENAME!
-    echo.
-    echo    Run that file to install The Collective on this machine.
+    echo    Run that .exe to install The Collective.
 ) else (
-    echo    Build completed but installer .exe was not found.
-    echo    Check the frontend\release\ folder manually.
+    echo    Build finished but .exe not found.
+    echo    Check:  %OUT%\
+    echo    and:    %FRONTEND%\release\
 )
 echo  ============================================================
 echo.
-echo  Press any key to exit...
-pause >nul
+pause
+exit /b 0
+
+:fail
+echo.
+echo  ============================================================
+echo    Build did not complete. See the error above.
+echo  ============================================================
+echo.
+pause
+exit /b 1
