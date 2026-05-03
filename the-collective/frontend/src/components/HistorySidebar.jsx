@@ -11,7 +11,7 @@ export default function HistorySidebar() {
   const load = useCallback(async () => {
     try {
       const data = await api.history.list();
-      setSessions(data || []);
+      setSessions(Array.isArray(data) ? data : []);
     } catch {}
   }, []);
 
@@ -31,7 +31,7 @@ export default function HistorySidebar() {
 
   function formatDate(iso) {
     if (!iso) return '';
-    const d = new Date(iso);
+    const d = new Date(typeof iso === 'number' ? iso * 1000 : iso);
     const now = new Date();
     const diff = now - d;
     if (diff < 86400000) return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });

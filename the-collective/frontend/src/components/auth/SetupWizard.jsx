@@ -13,21 +13,29 @@ const MODEL_OPTIONS = [
   { id: 'claude',   label: 'Claude API',               desc: 'Anthropic API key — most capable fallback.', icon: '✦' },
 ];
 
-const NEEDS_KEY = ['groq', 'claude'];
+const NEEDS_KEY = ['groq', 'claude', 'native'];
 
 export default function SetupWizard({ onComplete }) {
   const { notify } = useUIStore();
   const [step, setStep] = useState(0);
   const [provider, setProvider] = useState('groq');
   const [apiKey, setApiKey] = useState('');
+  const [ggufPath, setGgufPath] = useState('');
   const [saving, setSaving] = useState(false);
+
+  async function browseGguf() {
+    if (!window.electronAPI?.selectFile) return;
+    const path = await window.electronAPI.selectFile([{ name: 'GGUF Models', extensions: ['gguf'] }]);
+    if (path) setGgufPath(path);
+  }
 
   async function finish() {
     setSaving(true);
     try {
       const body = { setup_complete: true, preferred_provider: provider };
-      if (provider === 'groq'   && apiKey) body.groq_key      = apiKey;
-      if (provider === 'claude' && apiKey) body.anthropic_key = apiKey;
+      if (provider === 'groq'   && apiKey)   body.groq_key            = apiKey;
+      if (provider === 'claude' && apiKey)   body.anthropic_key       = apiKey;
+      if (provider === 'native' && ggufPath) body.native_model_pneuma = ggufPath;
       await api.settings.save(body);
       notify('Setup complete ✦');
       onComplete();
@@ -116,7 +124,36 @@ export default function SetupWizard({ onComplete }) {
           </div>
         )}
 
-        {current === 'apikey' && (
+        {current === 'apikey' && provider === 'native' && (
+          <div>
+            <div style={{ fontFamily: fonts.heading, fontSize: '14px', color: colors.text,
+              letterSpacing: '0.1em', marginBottom: '6px' }}>LOCAL GGUF MODEL</div>
+            <div style={{ fontFamily: fonts.mono, fontSize: '11px', color: colors.dim, marginBottom: '14px' }}>
+              Select a .gguf model file to run Logos fully offline. You can pick multiple models
+              later in <strong style={{ color: colors.muted }}>Config → Providers</strong>.
+            </div>
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+              <input value={ggufPath} onChange={e => setGgufPath(e.target.value)}
+                placeholder="Path to .gguf file…"
+                style={{ ...styles.input, flex: 1, fontFamily: fonts.mono, fontSize: '11px' }} />
+              {window.electronAPI?.selectFile && (
+                <button onClick={browseGguf} style={{ ...styles.btnGhost, flexShrink: 0 }}>Browse</button>
+              )}
+            </div>
+            <div style={{ fontFamily: fonts.mono, fontSize: '10px', color: colors.dim,
+              padding: '8px 10px', background: 'rgba(160,122,255,0.06)', borderRadius: radius.sm,
+              border: `1px solid ${colors.border}`, marginBottom: '20px' }}>
+              Recommended: any Q4_K_M or Q5_K_M quantized model (Llama 3, Qwen 3, Mistral, etc.).
+            </div>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button onClick={() => setStep(1)} style={{ ...styles.btnGhost, flex: 1 }}>Back</button>
+              <button onClick={() => setStep(3)} style={{ ...styles.btnGhost, flex: 1, color: colors.dim }}>Skip</button>
+              <button onClick={() => setStep(3)} style={{ ...styles.btnPrimary, flex: 2 }}>Continue</button>
+            </div>
+          </div>
+        )}
+
+        {current === 'apikey' && provider !== 'native' && (
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
               <div style={{ fontFamily: fonts.heading, fontSize: '14px', color: colors.text, letterSpacing: '0.1em' }}>

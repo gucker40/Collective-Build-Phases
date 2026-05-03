@@ -55,7 +55,7 @@ export const api = {
 
   // ── Artifacts ──────────────────────────────────────────────────────────────
   artifacts: {
-    list:   ()     => apiFetch('/artifacts/list'),
+    list:   ()     => apiFetch('/artifacts/list').then(d => d.artifacts || []),
     get:    (id)   => apiFetch(`/artifacts/get/${id}`),
     save:   (body) => apiFetch('/artifacts/save', { method: 'POST', body: JSON.stringify(body) }),
     delete: (id)   => apiFetch(`/artifacts/delete/${id}`, { method: 'DELETE' }),
@@ -63,7 +63,7 @@ export const api = {
 
   // ── Chat history ───────────────────────────────────────────────────────────
   history: {
-    list:   ()    => apiFetch('/history/list'),
+    list:   ()    => apiFetch('/history/list').then(d => d.sessions || []),
     load:   (id)  => apiFetch(`/history/load/${id}`),
     save:   (b)   => apiFetch('/history/save', { method: 'POST', body: JSON.stringify(b) }),
     delete: (id)  => apiFetch(`/history/delete/${id}`, { method: 'DELETE' }),
@@ -71,7 +71,7 @@ export const api = {
 
   // ── Memory ─────────────────────────────────────────────────────────────────
   memory: {
-    list:   ()    => apiFetch('/memory/list'),
+    list:   ()    => apiFetch('/memory/list').then(d => d.memories || []),
     seal:   (b)   => apiFetch('/memory/seal',   { method: 'POST', body: JSON.stringify(b) }),
     unseal: (id)  => apiFetch(`/memory/unseal/${id}`, { method: 'DELETE' }),
     delete: (id)  => apiFetch(`/memory/unseal/${id}`, { method: 'DELETE' }),
@@ -80,7 +80,7 @@ export const api = {
 
   // ── Data Vault (notes) ─────────────────────────────────────────────────────
   vault: {
-    list:   ()    => apiFetch('/vault/files'),
+    list:   ()    => apiFetch('/vault/files').then(d => d.files || []),
     load:   (fn)  => apiFetch(`/vault/load?filename=${encodeURIComponent(fn)}`),
     save:   (b)   => apiFetch('/vault/save',   { method: 'POST', body: JSON.stringify(b) }),
     delete: (fn)  => apiFetch(`/vault/delete?filename=${encodeURIComponent(fn)}`, { method: 'DELETE' }),
@@ -88,7 +88,7 @@ export const api = {
 
   // ── Skills ─────────────────────────────────────────────────────────────────
   skills: {
-    list:      ()    => apiFetch('/skills/list'),
+    list:      ()    => apiFetch('/skills/list').then(d => d.skills || []),
     toggle:    (id)  => apiFetch(`/skills/toggle/${id}`,    { method: 'POST' }),
     enable:    (id)  => apiFetch(`/skills/toggle/${id}`,    { method: 'POST' }),
     disable:   (id)  => apiFetch(`/skills/toggle/${id}`,    { method: 'POST' }),

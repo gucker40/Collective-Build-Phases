@@ -92,8 +92,8 @@ export default function Dashboard() {
         <StatCard label="COUNCIL STATUS" value={
           Object.values(council).filter(Boolean).length + '/3'
         } sub="members online" color={colors.purpleHi} />
-        <StatCard label="PROVIDER" value={status?.active_provider?.toUpperCase() || '—'}
-          sub={status?.model_loaded ? 'native model' : 'cloud'} color={colors.gold} />
+        <StatCard label="PROVIDER" value={status?.provider?.toUpperCase() || '—'}
+          sub={status?.native_available ? 'native model' : 'cloud'} color={colors.gold} />
         <StatCard label="MEMORIES" value={memories.length || '0'} sub="sealed entries" color={colors.success} />
       </div>
 
@@ -136,7 +136,7 @@ export default function Dashboard() {
             <div key={m.id || i} style={{ padding: '8px 0', borderBottom: i < memories.length - 1 ? `1px solid ${colors.border}` : 'none' }}>
               <div style={{ fontFamily: fonts.mono, fontSize: '11px', color: colors.muted,
                 lineHeight: '1.5', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {m.content}
+                {m.text || m.preview}
               </div>
             </div>
           ))}

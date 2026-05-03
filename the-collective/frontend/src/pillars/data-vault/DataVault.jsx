@@ -5,20 +5,43 @@ import { useUIStore } from '../../store/ui.js';
 
 const TABS = ['notes', 'artifacts', 'memories'];
 
+function formatTs(ts) {
+  if (!ts) return '';
+  return new Date(ts * 1000).toLocaleDateString();
+}
+
 function NoteCard({ note, onDelete }) {
   const [expanded, setExpanded] = useState(false);
+  const [content, setContent] = useState(null);
+  const [loadingContent, setLoadingContent] = useState(false);
+
+  async function toggle() {
+    if (!expanded && content === null) {
+      setLoadingContent(true);
+      try {
+        const data = await api.vault.load(note.filename);
+        setContent(data.content || '');
+      } catch {
+        setContent('Failed to load.');
+      }
+      setLoadingContent(false);
+    }
+    setExpanded(v => !v);
+  }
+
+  const displayName = (note.filename || 'Untitled').replace(/\.md$/, '');
+
   return (
-    <div style={{ ...styles.card, marginBottom: '10px', cursor: 'pointer' }}
-      onClick={() => setExpanded(v => !v)}>
+    <div style={{ ...styles.card, marginBottom: '10px', cursor: 'pointer' }} onClick={toggle}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
         <div style={{ flex: 1 }}>
           <div style={{ fontFamily: fonts.mono, fontSize: '12px', color: colors.text,
-            marginBottom: '3px' }}>{note.title || 'Untitled'}</div>
+            marginBottom: '3px' }}>{displayName}</div>
           <div style={{ fontFamily: fonts.mono, fontSize: '10px', color: colors.dim }}>
-            {note.updated_at ? new Date(note.updated_at).toLocaleDateString() : ''}
+            {formatTs(note.updated_at)}
           </div>
         </div>
-        <button onClick={e => { e.stopPropagation(); onDelete(note.id); }} style={{
+        <button onClick={e => { e.stopPropagation(); onDelete(note); }} style={{
           background: 'transparent', border: 'none', cursor: 'pointer',
           color: colors.dim, fontSize: '12px',
         }}>✕</button>
@@ -27,7 +50,7 @@ function NoteCard({ note, onDelete }) {
         <div style={{ marginTop: '12px', padding: '10px', background: 'rgba(0,0,0,0.2)',
           borderRadius: radius.sm, fontFamily: fonts.mono, fontSize: '11px',
           color: colors.muted, lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>
-          {note.content}
+          {loadingContent ? 'Loading…' : content}
         </div>
       )}
     </div>
@@ -49,7 +72,7 @@ function ArtifactCard({ artifact, onOpen }) {
           <div style={{ fontFamily: fonts.mono, fontSize: '12px', color: colors.text,
             marginBottom: '2px' }}>{artifact.title}</div>
           <div style={{ fontFamily: fonts.mono, fontSize: '10px', color: colors.dim }}>
-            {artifact.language} · {artifact.time_ago || ''}
+            {artifact.language} · {artifact.created_ago || ''}
           </div>
         </div>
         <div style={{ fontFamily: fonts.mono, fontSize: '9px', color: colors.purpleHi }}>
@@ -67,7 +90,7 @@ function MemoryCard({ memory, onDelete }) {
         <div style={{ width: '6px', height: '6px', borderRadius: '50%', marginTop: '5px',
           background: colors.gold, flexShrink: 0 }} />
         <div style={{ flex: 1, fontFamily: fonts.mono, fontSize: '11px', color: colors.muted,
-          lineHeight: '1.6' }}>{memory.content}</div>
+          lineHeight: '1.6' }}>{memory.text || memory.preview}</div>
         <button onClick={() => onDelete(memory.id)} style={{
           background: 'transparent', border: 'none', cursor: 'pointer',
           color: colors.dim, fontSize: '12px', flexShrink: 0,
@@ -108,15 +131,15 @@ export default function DataVault() {
   async function addNote(e) {
     e.preventDefault();
     try {
-      const n = await api.vault.save({ title: newTitle || 'Untitled', content: newContent });
-      setNotes(prev => [n, ...prev]);
+      await api.vault.save({ filename: newTitle || 'Untitled', content: newContent });
       setNewTitle(''); setNewContent(''); setShowAdd(false);
+      await load();
     } catch (err) { notify(err.message, 'error'); }
   }
 
   async function deleteNote(note) {
     try {
-      await api.vault.delete(note.title || note.filename || String(note.id));
+      await api.vault.delete(note.filename);
       setNotes(prev => prev.filter(n => n.id !== note.id));
     } catch {}
   }
@@ -181,7 +204,7 @@ export default function DataVault() {
           notes.length === 0
             ? <div style={{ fontFamily: fonts.mono, fontSize: '11px', color: colors.dim,
                 textAlign: 'center', padding: '40px' }}>No notes yet.</div>
-            : notes.map(n => <NoteCard key={n.id || n.filename} note={n} onDelete={() => deleteNote(n)} />)
+            : notes.map(n => <NoteCard key={n.id || n.filename} note={n} onDelete={deleteNote} />)
         )}
 
         {!loading && tab === 'artifacts' && (
