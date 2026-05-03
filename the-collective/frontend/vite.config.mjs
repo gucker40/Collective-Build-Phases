@@ -4,6 +4,7 @@ import { resolve } from 'path';
 
 export default defineConfig(({ mode }) => ({
   plugins: [react()],
+  base: './',   // relative asset paths so file:// loading works in packaged Electron
   root: '.',
   publicDir: 'public',
   build: {

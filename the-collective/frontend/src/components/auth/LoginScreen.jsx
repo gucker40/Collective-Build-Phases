@@ -23,7 +23,7 @@ export default function LoginScreen() {
       } else {
         data = await api.auth.register({ username, password, display_name: displayName || username });
       }
-      login(data.token, data.user);
+      login(data.user, data.token);
     } catch (err) {
       setError(err.message.replace(/^\d+:\s*/, ''));
     }

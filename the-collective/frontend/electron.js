@@ -82,7 +82,7 @@ function waitForBackend(retries = 30, delay = 500) {
   return new Promise((resolve, reject) => {
     let attempts = 0;
     function check() {
-      const req = http.get(`http://localhost:${BACKEND_PORT}/api/health`, res => {
+      const req = http.get(`http://localhost:${BACKEND_PORT}/health`, res => {
         resolve();
       });
       req.on('error', () => {
