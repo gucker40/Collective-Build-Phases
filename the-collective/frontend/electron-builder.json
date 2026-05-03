@@ -3,7 +3,7 @@
   "productName": "The Collective",
   "copyright": "Copyright © 2024 The Collective",
   "directories": {
-    "output": "../../../../installer",
+    "output": "../../installer",
     "buildResources": "build-resources"
   },
   "files": [

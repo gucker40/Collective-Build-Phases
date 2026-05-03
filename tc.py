@@ -2,20 +2,18 @@
 The Collective — Python launcher / diagnostics.
 Usage:
   python tc.py diagnose     print system info and save to tc-diagnose.txt
-  python tc.py web          start backend + open http://localhost:5173
-  python tc.py desktop      start backend + launch Electron dev window
   python tc.py build        build the Windows installer
 """
 import sys, os, subprocess, shutil, time, platform, json
 from pathlib import Path
 
-_WIN = os.name == "nt"   # npm/npx are .cmd files on Windows — need shell=True
+_WIN = os.name == "nt"
 
-ROOT     = Path(__file__).resolve().parent
-BACKEND  = ROOT / "the-collective" / "backend"
-FRONTEND = ROOT / "the-collective" / "frontend"
+ROOT          = Path(__file__).resolve().parent
+BACKEND       = ROOT / "the-collective" / "backend"
+FRONTEND      = ROOT / "the-collective" / "frontend"
 INSTALLER_OUT = ROOT / "installer"
-LOG_FILE = ROOT / "tc-log.txt"
+LOG_FILE      = ROOT / "tc-log.txt"
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -24,20 +22,29 @@ def log(msg=""):
     with open(LOG_FILE, "a", encoding="utf-8") as f:
         f.write(msg + "\n")
 
+def _resolve(name):
+    """Return the full path to a command, handling .cmd wrappers on Windows."""
+    for variant in ([name + ".cmd", name] if _WIN else [name]):
+        path = shutil.which(variant)
+        if path:
+            return path
+    return name  # fall back to bare name; will fail with a clear message
+
 def run(cmd, cwd=None, env=None, check=True):
     """Run a command, streaming output to console and log file."""
+    resolved = [_resolve(str(cmd[0]))] + [str(c) for c in cmd[1:]]
     log(f"\n>> {' '.join(str(c) for c in cmd)}")
     with open(LOG_FILE, "a", encoding="utf-8") as logf:
         proc = subprocess.Popen(
-            cmd, cwd=cwd, env=env,
+            resolved, cwd=cwd, env=env,
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             text=True, encoding="utf-8", errors="replace",
-            shell=_WIN,   # required on Windows for npm.cmd / npx.cmd
         )
         for line in proc.stdout:
             line = line.rstrip()
             print(line)
             logf.write(line + "\n")
+            logf.flush()
         proc.wait()
     if check and proc.returncode != 0:
         raise RuntimeError(f"Command failed with exit code {proc.returncode}")
@@ -45,23 +52,24 @@ def run(cmd, cwd=None, env=None, check=True):
 
 def find_python():
     for candidate in ["python", "python3", "py"]:
-        if shutil.which(candidate):
-            result = subprocess.run([candidate, "--version"],
-                                    capture_output=True, text=True, shell=_WIN)
+        path = shutil.which(candidate)
+        if path:
+            result = subprocess.run([path, "--version"], capture_output=True, text=True)
             if result.returncode == 0:
-                return candidate, result.stdout.strip() + result.stderr.strip()
+                return path, result.stdout.strip() + result.stderr.strip()
     return None, None
 
 def find_node():
-    if shutil.which("node"):
-        r = subprocess.run(["node", "--version"], capture_output=True, text=True, shell=_WIN)
+    path = shutil.which("node")
+    if path:
+        r = subprocess.run([path, "--version"], capture_output=True, text=True)
         return r.stdout.strip()
     return None
 
 def find_npm():
-    # On Windows npm is npm.cmd — shutil.which finds it but subprocess needs shell=True
-    if shutil.which("npm") or shutil.which("npm.cmd"):
-        r = subprocess.run(["npm", "--version"], capture_output=True, text=True, shell=_WIN)
+    path = _resolve("npm")
+    if shutil.which(path) or Path(path).exists():
+        r = subprocess.run([path, "--version"], capture_output=True, text=True)
         if r.returncode == 0:
             return r.stdout.strip()
     return None
@@ -100,10 +108,8 @@ def cmd_diagnose():
     p(f"  Command: {py or 'NOT FOUND'}")
     p(f"  Version: {pyver or 'N/A'}")
     if py:
-        r = subprocess.run([py, "-m", "pip", "--version"],
-                           capture_output=True, text=True)
+        r = subprocess.run([py, "-m", "pip", "--version"], capture_output=True, text=True)
         p(f"  pip:     {(r.stdout + r.stderr).strip()}")
-        # Check if aiosqlite is importable
         r2 = subprocess.run([py, "-c", "import aiosqlite; print('aiosqlite OK')"],
                             capture_output=True, text=True, cwd=str(BACKEND))
         p(f"  aiosqlite: {(r2.stdout + r2.stderr).strip()}")
@@ -114,9 +120,8 @@ def cmd_diagnose():
     npm_ver  = find_npm()
     p(f"  node: {node_ver or 'NOT FOUND'}")
     p(f"  npm:  {npm_ver  or 'NOT FOUND'}")
-    npx = shutil.which("npx")
+    npx = shutil.which("npx.cmd") or shutil.which("npx")
     p(f"  npx:  {npx or 'NOT FOUND'}")
-    # Check if electron binary downloaded
     electron_bin = FRONTEND / "node_modules" / "electron" / "dist" / "electron.exe"
     p(f"  Electron binary: {'FOUND' if electron_bin.exists() else 'NOT FOUND (run npm install first)'}")
     p()
@@ -140,78 +145,6 @@ def cmd_diagnose():
     if _WIN:
         p("Opening in Notepad...")
         os.startfile(str(out))
-
-def cmd_web():
-    py, _ = find_python()
-    if not py:
-        log("[ERROR] Python not found. Install from python.org")
-        return 1
-
-    log("[1/3] Installing Python dependencies...")
-    run([py, "-m", "pip", "install", "-r", "requirements.txt",
-         "--disable-pip-version-check"], cwd=BACKEND)
-    log("[1/3] Done.")
-
-    if not find_npm():
-        log("[ERROR] npm not found. Install Node.js from nodejs.org")
-        return 1
-
-    log("[2/3] Installing Node dependencies (first run downloads ~80MB)...")
-    run(["npm", "install"], cwd=FRONTEND)
-    log("[2/3] Done.")
-
-    log("[3/3] Starting backend on port 8000...")
-    subprocess.Popen(
-        [py, "main.py"], cwd=BACKEND,
-        creationflags=subprocess.CREATE_NEW_CONSOLE if os.name == "nt" else 0
-    )
-    time.sleep(3)
-
-    log("Opening http://localhost:5173 ...")
-    if _WIN:
-        os.startfile("http://localhost:5173")
-
-    log("Starting Vite dev server... (close this window to stop)")
-    run(["npm", "run", "dev"], cwd=FRONTEND, check=False)
-    return 0
-
-def cmd_desktop():
-    py, _ = find_python()
-    if not py:
-        log("[ERROR] Python not found. Install from python.org")
-        return 1
-
-    log("[1/3] Installing Python dependencies...")
-    run([py, "-m", "pip", "install", "-r", "requirements.txt",
-         "--disable-pip-version-check"], cwd=BACKEND)
-    log("[1/3] Done.")
-
-    if not find_npm():
-        log("[ERROR] npm not found. Install Node.js from nodejs.org")
-        return 1
-
-    log("[2/3] Installing Node dependencies...")
-    run(["npm", "install"], cwd=FRONTEND)
-
-    # Ensure Electron binary
-    electron_bin = FRONTEND / "node_modules" / "electron" / "dist" / "electron.exe"
-    if not electron_bin.exists():
-        install_js = FRONTEND / "node_modules" / "electron" / "install.js"
-        if install_js.exists():
-            log("Downloading Electron binary...")
-            run(["node", str(install_js)], cwd=FRONTEND)
-    log("[2/3] Done.")
-
-    log("[3/3] Starting backend...")
-    subprocess.Popen(
-        [py, "main.py"], cwd=BACKEND,
-        creationflags=subprocess.CREATE_NEW_CONSOLE if os.name == "nt" else 0
-    )
-    time.sleep(3)
-
-    log("Launching Electron app...")
-    run(["npm", "run", "electron:dev"], cwd=FRONTEND, check=False)
-    return 0
 
 def cmd_build():
     py, _ = find_python()
@@ -241,34 +174,28 @@ def cmd_build():
     run(["npx", "electron-builder", "--win"], cwd=FRONTEND)
     log("[4/4] Done.")
 
-    # Find and report the .exe
-    exes = list((FRONTEND / "release").glob("**/*.exe")) + \
-           list(INSTALLER_OUT.glob("*.exe"))
+    time.sleep(1)  # let file system flush before globbing
+    exes = list(INSTALLER_OUT.glob("*.exe"))
+    exes = [e for e in exes if not e.name.endswith(".blockmap")]
     if exes:
-        for exe in exes[:1]:
-            dest = INSTALLER_OUT / exe.name
-            if exe != dest:
-                shutil.copy2(exe, dest)
-            log()
-            log("=" * 60)
-            log(f"  SUCCESS: installer\\{exe.name}")
-            log("  Run that .exe to install The Collective.")
-            log("=" * 60)
+        log()
+        log("=" * 60)
+        log(f"  SUCCESS: installer\\{exes[0].name}")
+        log("  Run that .exe to install The Collective.")
+        log("=" * 60)
     else:
         log("[WARN] Build finished but no .exe found.")
-        log(f"       Check: {FRONTEND / 'release'}")
+        log(f"       Check: {INSTALLER_OUT}")
 
     log(f"\nFull log saved to: {LOG_FILE}")
     return 0
 
 # ── entry point ───────────────────────────────────────────────────────────────
 
-COMMANDS = {"diagnose": cmd_diagnose, "web": cmd_web,
-            "desktop": cmd_desktop, "build": cmd_build}
+COMMANDS = {"diagnose": cmd_diagnose, "build": cmd_build}
 
 if __name__ == "__main__":
-    # Clear log on fresh run
-    with open(LOG_FILE, "w") as f:
+    with open(LOG_FILE, "w", encoding="utf-8") as f:
         f.write(f"tc.py log — {time.strftime('%Y-%m-%d %H:%M:%S')}\n\n")
 
     cmd = sys.argv[1] if len(sys.argv) > 1 else None
