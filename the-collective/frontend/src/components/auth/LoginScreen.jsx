@@ -5,29 +5,51 @@ import { api } from '../../api/index.js';
 
 export default function LoginScreen() {
   const { login } = useAuthStore();
-  const [mode, setMode] = useState('login');
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [mode, setMode]               = useState('login');
+  const [username, setUsername]       = useState('');
+  const [password, setPassword]       = useState('');
   const [displayName, setDisplayName] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [error, setError]             = useState('');
+  const [loading, setLoading]         = useState(false);
+  const [success, setSuccess]         = useState('');
 
   async function submit(e) {
     e.preventDefault();
     setError('');
+    setSuccess('');
     setLoading(true);
     try {
       let data;
       if (mode === 'login') {
         data = await api.auth.login({ username, password });
       } else {
-        data = await api.auth.register({ username, password, display_name: displayName || username });
+        setSuccess('Creating account…');
+        data = await api.auth.register({
+          username,
+          password,
+          display_name: displayName || username,
+        });
+        setSuccess('Account created — signing you in…');
       }
-      login(data.user, data.token);
+      // Backend returns flat fields: { token, id, username, display_name, role }
+      const user = {
+        id:           data.id,
+        username:     data.username,
+        display_name: data.display_name,
+        role:         data.role,
+      };
+      login(user, data.token);
     } catch (err) {
-      setError(err.message.replace(/^\d+:\s*/, ''));
+      setSuccess('');
+      setError(err.message.replace(/^\d+:\s*/, '') || 'Something went wrong. Is the backend running?');
     }
     setLoading(false);
+  }
+
+  function switchMode() {
+    setMode(m => m === 'login' ? 'register' : 'login');
+    setError('');
+    setSuccess('');
   }
 
   return (
@@ -83,16 +105,28 @@ export default function LoginScreen() {
             </div>
           )}
 
+          {success && (
+            <div style={{ fontFamily: fonts.mono, fontSize: '11px', color: colors.success,
+              padding: '8px 10px', background: 'rgba(80,216,144,0.08)',
+              borderRadius: radius.sm, border: '1px solid rgba(80,216,144,0.2)',
+              display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '14px' }}>✓</span> {success}
+            </div>
+          )}
+
           <button type="submit" disabled={loading} style={{
             ...styles.btnPrimary, marginTop: '4px',
             opacity: loading ? 0.6 : 1, cursor: loading ? 'not-allowed' : 'pointer',
+            width: '100%', textAlign: 'center',
           }}>
-            {loading ? '...' : mode === 'login' ? 'Sign In' : 'Create Account'}
+            {loading
+              ? (mode === 'register' ? 'Creating…' : 'Signing in…')
+              : (mode === 'login'    ? 'Sign In'   : 'Create Account')}
           </button>
         </form>
 
         <div style={{ textAlign: 'center', marginTop: '20px' }}>
-          <button onClick={() => { setMode(m => m === 'login' ? 'register' : 'login'); setError(''); }}
+          <button onClick={switchMode}
             style={{ background: 'none', border: 'none', cursor: 'pointer',
               fontFamily: fonts.mono, fontSize: '11px', color: colors.dim,
               textDecoration: 'underline', letterSpacing: '0.04em' }}>
