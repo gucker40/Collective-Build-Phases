@@ -1,0 +1,64 @@
+{
+  "appId": "com.thecollective.app",
+  "productName": "The Collective",
+  "copyright": "Copyright © 2024 The Collective",
+  "directories": {
+    "output": "../../installer",
+    "buildResources": "build-resources"
+  },
+  "files": [
+    "dist/**/*",
+    "electron.js",
+    "preload.js",
+    "package.json",
+    "public/**/*",
+    "!node_modules"
+  ],
+  "extraResources": [
+    {
+      "from": "../backend",
+      "to": "backend",
+      "filter": [
+        "**/*.py",
+        "requirements.txt",
+        "!__pycache__",
+        "!**/__pycache__",
+        "!*.pyc"
+      ]
+    },
+    {
+      "from": "dist",
+      "to": "web"
+    }
+  ],
+  "win": {
+    "target": [
+      { "target": "nsis", "arch": ["x64"] }
+    ],
+    "icon": "public/icon.ico",
+    "requestedExecutionLevel": "asInvoker"
+  },
+  "nsis": {
+    "oneClick": true,
+    "perMachine": false,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "The Collective"
+  },
+  "mac": {
+    "target": [
+      { "target": "dmg", "arch": ["x64", "arm64"] }
+    ],
+    "icon": "public/icon.icns",
+    "category": "public.app-category.productivity",
+    "darkModeSupport": true
+  },
+  "linux": {
+    "target": [
+      { "target": "AppImage", "arch": ["x64"] }
+    ],
+    "icon": "public/icon.png",
+    "category": "Utility"
+  },
+  "publish": null
+}
