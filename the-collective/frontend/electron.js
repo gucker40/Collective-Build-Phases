@@ -22,11 +22,22 @@ function getBackendPath() {
 }
 
 function getPythonPath() {
-  if (isDev) return 'python';
+  // Check for bundled Python first; fall back to system Python if not present.
+  // A bundled interpreter is optional — system Python (installed as prereq) works fine.
   if (process.platform === 'win32') {
-    return path.join(process.resourcesPath, 'python', 'python.exe');
+    const bundled = path.join(process.resourcesPath, 'python', 'python.exe');
+    if (fs.existsSync(bundled)) return bundled;
+    for (const name of ['python', 'py', 'python3']) {
+      try {
+        require('child_process').execFileSync(name, ['--version'], { stdio: 'ignore' });
+        return name;
+      } catch {}
+    }
+    return 'python';
   }
-  return path.join(process.resourcesPath, 'python', 'bin', 'python3');
+  const bundled = path.join(process.resourcesPath, 'python', 'bin', 'python3');
+  if (fs.existsSync(bundled)) return bundled;
+  return process.platform === 'darwin' ? 'python3' : 'python3';
 }
 
 function startBackend() {
